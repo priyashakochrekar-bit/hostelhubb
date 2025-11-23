@@ -1,69 +1,93 @@
-// app.js
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const db = require("./db");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
 
-const app = express();
-
-app.use(bodyParser.json());
-app.use(cors());
-app.use(express.static("public")); // serve HTML files
-
-// --------------------- Register User ---------------------
-app.post("/register", (req, res) => {
-    const { name, email, password, phone } = req.body;
-
-    const sql = "INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)";
-    db.query(sql, [name, email, password, phone], (err, result) => {
-        if (err) return res.json({ status: "error", error: err });
-        res.json({ status: "success", message: "User registered" });
-    });
-});
-
-// --------------------- Login ---------------------
-app.post("/login", (req, res) => {
-    console.log('log1', req.body)
-    const { email, password } = req.body;
-
-    const sql = "SELECT * FROM users WHERE email = ? AND password = ?";
-    db.query(sql, [email, password], (err, results) => {
-        console.log('log1', results )
-        if (err) return res.json({ status: "error", error: err });
-
-        if (results.length > 0) {
-            res.json({ status: "success", user: results[0] });
-        } else {
-            res.json({ status: "failed", message: "Invalid credentials" });
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
         }
-    });
-});
+        #loginBox {
+            max-width: 350px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
 
-// --------------------- Add Complaint ---------------------
-app.post("/complaint", (req, res) => {
-    const { student_id, title, description } = req.body;
+</head>
+<body>
 
-    const sql = "INSERT INTO complaints (student_id, title, description, status) VALUES (?, ?, ?, 'Open')";
-    db.query(sql, [student_id, title, description], (err, result) => {
-        if (err) return res.json({ status: "error", error: err });
-        res.json({ status: "success", message: "Complaint submitted" });
-    });
-});
+    <div id="loginBox">
+        <h2>Login</h2>
 
-// --------------------- Get Complaints for a User ---------------------
-app.get("/complaints/:id", (req, res) => {
-    const id = req.params.id;
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
 
-    const sql = "SELECT * FROM complaints WHERE student_id = ?";
-    db.query(sql, [id], (err, results) => {
-        if (err) return res.json({ status: "error", error: err });
-        res.json(results);
-    });
-});
+    <script>
+        const API_URL = "http://localhost:5000";
 
-// --------------------- Start Server ---------------------
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+
+            if (!email || !password) {
+                alert("Please enter email and password");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+                console.log("Response:", data);
+
+                if (data.status === "success") {
+                    // Save user details returned from backend
+                    localStorage.setItem("userId", data.user.id);
+                    localStorage.setItem("username", data.user.username);
+
+                    alert("Login successful!");
+
+                    // Redirect to dashboard
+                    window.location.href = "dashboard.html";
+                } else {
+                    alert(data.message || "Invalid credentials");
+                }
+
+            } catch (error) {
+                console.error("Login error:", error);
+                alert("Unable to connect to server");
+            }
+        });
+    </script>
+
+</body>
+</html>

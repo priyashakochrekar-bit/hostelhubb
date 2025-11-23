@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .complaint-box {
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #0284C7;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0369A1;
+        }
+
+        #logoutBtn {
+            background: #D63D3D;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Welcome, <span id="username"></span></h2>
+
+    <button id="logoutBtn">Logout</button>
+
+    <hr>
+
+    <h3>Submit a Complaint</h3>
+
+    <form id="complaintForm">
+        <input type="text" id="title" placeholder="Complaint Title" required>
+        <textarea id="description" rows="4" placeholder="Complaint Description" required></textarea>
+        <button type="submit">Submit Complaint</button>
+    </form>
+
+    <hr>
+
+    <h3>Your Complaints</h3>
+    <div id="complaintsList"></div>
+
+
+    <!-- SCRIPT SECTION -->
+    <script>
+        // Redirect if user not logged in
+        const token = localStorage.getItem("token");
+        const username = localStorage.getItem("username");
+
+        if (!token) {
+            window.location.href = "index.html";
+        }
+
+        document.getElementById("username").innerText = username;
+
+        const API_URL = "http://localhost:5000";
+
+        // Load complaints once the page loads
+        window.onload = loadComplaints;
+
+        // Submit complaint
+        document.getElementById("complaintForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById("title").value.trim();
+            const description = document.getElementById("description").value.trim();
+
+            if (!title || !description) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/api/complaints`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ title, description })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("Complaint submitted!");
+                document.getElementById("complaintForm").reset();
+                loadComplaints();
+            } else {
+                alert(data.message || "Error submitting complaint");
+            }
+        });
+
+        // Load all complaints
+        async function loadComplaints() {
+            const res = await fetch(`${API_URL}/api/complaints`, {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            const data = await res.json();
+            const list = document.getElementById("complaintsList");
+            list.innerHTML = "";
+
+            if (data.length === 0) {
+                list.innerHTML = "<p>No complaints submitted yet.</p>";
+                return;
+            }
+
+            data.forEach((c) => {
+                const div = document.createElement("div");
+                div.className = "complaint-box";
+
+                div.innerHTML = `
+                    <h4>${c.title}</h4>
+                    <p>${c.description}</p>
+                    <p><strong>Status:</strong> ${c.status}</p>
+                    <p><small>Submitted on: ${new Date(c.created_at).toLocaleString()}</small></p>
+                `;
+
+                list.appendChild(div);
+            });
+        }
+
+        // Logout
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "index.html";
+        });
+    </script>
+
+</body>
+</html>
